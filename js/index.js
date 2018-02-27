@@ -222,13 +222,12 @@ window.onload = function(){
 		}
 
 		app.authorizeUser = function(){
-		    firebase.auth().signInWithEmailAndPassword("lgd.beta.slave@gmail.com", "LGDsl@ve").then(function(data){
-		      // console.log('signed in')
+		    // firebase.auth().signInWithEmailAndPassword("lgd.beta.slave@gmail.com", "LGDsl@ve").then(function(data){
 		      app.isuserloggedin = true;
-		    }).catch(function(err){
-		    	app.ifLoginRequested = false;
-		    	console.log(err)
-		    })
+		    // }).catch(function(err){
+		    	// app.ifLoginRequested = false;
+		    	// console.log(err)
+		    // })
 		}
 		
 		// db.collection("ch1_g").doc(app.deviceid).collection('data')

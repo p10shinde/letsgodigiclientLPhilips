@@ -3,12 +3,12 @@
 var db;
 
   app.fireConfig = {
-    apiKey: "AIzaSyA6ZNEl3KaepALyrN3GxioCNxvUzsDtbYo",
-    authDomain: "for-lgd-schedule.firebaseapp.com",
-    databaseURL: "https://for-lgd-schedule.firebaseio.com",
-    projectId: "for-lgd-schedule",
-    storageBucket: "for-lgd-schedule.appspot.com",
-    messagingSenderId: "848626933775"
+    apiKey: "AIzaSyD1hVzBvQnJlE68WzKCweQB45jlHHWTQFI",
+    authDomain: "for-lgd-schedule-demo.firebaseapp.com",
+    databaseURL: "https://for-lgd-schedule-demo.firebaseio.com",
+    projectId: "for-lgd-schedule-demo",
+    storageBucket: "for-lgd-schedule-demo.appspot.com",
+    messagingSenderId: "58895878910"
   };
 
 
@@ -96,6 +96,15 @@ function getFileBasedOnTime(channel,time,callback){
       if (doc.exists) {
           console.log("Got New Planned data for " + channel);
           nextFile = doc.data();
+      }else{
+        if(channel == "ch1_p")
+        {
+          nextFile = firstll.getNextNode();
+        }
+        else if(channel == "ticker")
+        {
+          nextFile = {startTime : time,text:"WELCOME TO LETSGODIGI"};
+        }
       }
       callback(nextFile);
   }).catch(function(error) {
