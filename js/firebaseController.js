@@ -73,6 +73,8 @@ CircularList.prototype.getNextNode = function(){
 
 
 var firstll = new CircularList();
+var secondll = new CircularList();
+var thirdll = new CircularList();
 var fourthll = new CircularList();
 
 app.checkIfUserIsLoggedIn = function(){
@@ -97,12 +99,13 @@ function getFileBasedOnTime(channel,time,callback){
           console.log("Got New Planned data for " + channel);
           nextFile = doc.data();
       }else{
-        if(channel == "ch1_p")
-        {
+        if(channel == "ch1_p"){
           nextFile = firstll.getNextNode();
-        }
-        else if(channel == "ticker")
-        {
+        }else if(channel == "ch2_p"){
+          nextFile = secondll.getNextNode();
+        }else if(channel == "ch3_p"){
+          nextFile = thirdll.getNextNode();
+        }else if(channel == "ticker"){
           nextFile = {startTime : time,text:"WELCOME TO LETSGODIGI"};
         }
       }
@@ -110,12 +113,13 @@ function getFileBasedOnTime(channel,time,callback){
   }).catch(function(error) {
       nextFile = {};
       if(error.message == "Failed to get document because the client is offline."){
-          if(channel == "ch1_p")
-          {
+          if(channel == "ch1_p"){
             nextFile = firstll.getNextNode();
-          }
-          else if(channel == "ticker")
-          {
+          }else if(channel == "ch2_p"){
+            nextFile = secondll.getNextNode();
+          }else if(channel == "ch3_p"){
+            nextFile = thirdll.getNextNode();
+          }else if(channel == "ticker"){
             nextFile = {startTime : time,text:"WELCOME TO LETSGODIGI"};
           }
           callback(nextFile);
@@ -139,6 +143,29 @@ function getSOSFromFirebase(time,callback){
           callbackData.data = doc.data();
           callbackData.type = "sos"
           callback(callbackData)
+      } else {
+          callback({})
+      }
+  }).catch(function(error) {
+      if(error.message == "Failed to get document because the client is offline."){
+          callback({})
+      }
+      console.log("Error getting document:", error);
+  });
+}
+
+function getCampaign(time,callback){
+  if(!app.checkIfUserIsLoggedIn() && !app.ifLoginRequested){
+    app.ifLoginRequested = true;
+    app.authorizeUser();
+  }
+  time = moment(time).format('DD-MM-YYYY_hh:mm_A')
+  docRef = firebase.firestore().collection('campaign').doc(app.groupName).collection('data').doc(time)
+
+  docRef.get().then(function(doc) {
+      if (doc.exists) {
+          console.log("Received campaign request...=>");
+          callback(doc.data());
       } else {
           callback({})
       }

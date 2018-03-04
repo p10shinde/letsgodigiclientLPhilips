@@ -299,3 +299,48 @@ video{
 
 }
 
+
+/* 65 and 35*/
+/* Large desktops and laptops */
+@media (min-width: 1200px) {
+  .col-xs-65-custom{
+    width: 65%;
+  }
+
+  .col-xs-35-custom{
+    width: 35%;
+  }
+}
+
+/* Landscape tablets and medium desktops */
+@media (min-width: 992px) and (max-width: 1199px) {
+  .col-xs-65-custom{
+    width: 65%;
+  }
+
+  .col-xs-35-custom{
+    width: 35%;
+  }
+}
+
+/* Portrait tablets and small desktops */
+@media (min-width: 768px) and (max-width: 991px) {
+  .col-xs-65-custom{
+    width: 65%;
+  }
+
+  .col-xs-35-custom{
+    width: 35%;
+  }
+}
+
+/* Landscape phones and portrait tablets */
+@media (max-width: 767px) {
+.col-xs-65-custom{
+    width: 65%;
+  }
+
+  .col-xs-35-custom{
+    width: 35%;
+  }
+}

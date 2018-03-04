@@ -12,11 +12,15 @@ if(!app.deviceid){ app.deviceid = ""; alert('Could not get deviceid')}
 if(!app.groupName){ app.groupName = ""; alert('Could not get groupname')}
 
 // app.deviceid = 'pl_a_tower';
-app.imageElements = {};
-app.videoElements = {};
-app.imageElements.image1 = '<img id="img1" class="imgs" onerror="this.onerror=null;this.src=\'../advt/default.png\';"></img>';
+app.imageElements = [];
+app.videoElements = [];
+app.imageElements[0] = '<img id="img1" class="imgs" onerror="this.onerror=null;this.src=\'../advt/default.png\';"></img>';
+app.imageElements[1] = '<img id="img2" class="imgs" onerror="this.onerror=null;this.src=\'../advt/default.png\';"></img>';
+app.imageElements[2] = '<img id="img3" class="imgs" onerror="this.onerror=null;this.src=\'../advt/default.png\';"></img>';
 
-app.videoElements.video1 = '<video id="vid1" class="vids" width="100%" height="100%" autoplay muted loop ></video>';
+app.videoElements[0] = '<video id="vid1" class="vids" width="100%" height="100%" autoplay loop muted></video>';
+app.videoElements[1] = '<video id="vid2" class="vids" width="100%" height="100%" autoplay loop muted></video>';
+app.videoElements[2] = '<video id="vid3" class="vids" width="100%" height="100%" autoplay loop muted></video>';
 app.resourceFolder = app.groupName;
 app.advtFolder = 'advt';
 
@@ -32,7 +36,8 @@ app.sosInterval;
 app.sosIntervalTime;
 
 app.isuserloggedin = false;
-
+app.campaignName = 'campaign1';
+app.campaignDuration = 2;
 var URL = "..";
 
 window.onload = function(){
@@ -72,6 +77,15 @@ window.onload = function(){
 	    }
 	})(jQuery);
 
+	app.authorizeUser = function(){
+	    // firebase.auth().signInWithEmailAndPassword("lgd.beta.slave@gmail.com", "LGDsl@ve").then(function(data){
+	      app.isuserloggedin = true;
+	    // }).catch(function(err){
+	    	// app.ifLoginRequested = false;
+	    	// console.log(err)
+	    // })
+	}
+
 
 	function loadConfig(callback){
 		//  LGD
@@ -80,6 +94,7 @@ window.onload = function(){
 			"firstChannelIntervalTime" : 20,
 			"fourthChannelIntervalTime" : 20,
 			"sosIntervalTime" : 1,
+			"campaignIntervalTime" : 5,
 		}
 		callback(200,configData)
 	}
@@ -91,8 +106,39 @@ window.onload = function(){
 			app.firstChannelIntervalTime = configData.firstChannelIntervalTime;
 			app.fourthChannelIntervalTime = configData.fourthChannelIntervalTime;
 			app.sosIntervalTime = configData.sosIntervalTime;
-				initializeApp();
-				checkForVideoAndSOS();
+			app.campaignIntervalTime = configData.campaignIntervalTime;
+			app.checkCampaignData = function(){
+				getCampaign(getCurrentISODateCampaign(),function(campaignData){
+					if(!(Object.keys(campaignData).length === 0 && campaignData.constructor === Object)){
+						app.campaignName = campaignData.campName;
+						app.campaignDuration = campaignData.duration;
+
+					}else{
+						app.campaignName = "campaign1";
+						app.campaignDuration = 2;						
+					}
+						$(".campaigns").hide();
+						$("#" + app.campaignName).show();
+						$(".contentHolders").empty();
+						initializeApp();
+						checkForVideoAndSOS();
+
+					endTimeFOrCurrentSlot = moment(new Date());
+					remainder = app.campaignDuration - endTimeFOrCurrentSlot.minute() % app.campaignDuration;
+					nextEndTimeMinute = moment(endTimeFOrCurrentSlot).add(remainder,"minutes").startOf('minute').minute()
+					if(nextEndTimeMinute == 0) nextEndTimeMinute = 60; 
+					currentTimeMinute = moment(moment(new Date()).startOf('minute').toISOString()).minute();
+					if(currentTimeMinute == 0) currentTimeMinute = 60; 
+					duration = nextEndTimeMinute - currentTimeMinute;
+					app.campaignIntervalTime = duration;
+
+					clearTimeout(app.campaignInterval);
+					app.campaignInterval = setTimeout(function(){
+						app.checkCampaignData();
+					},app.campaignIntervalTime * 60000)
+				})
+			}
+			app.checkCampaignData();
 		}else{
 			alert('config error');
 		}
@@ -102,6 +148,12 @@ window.onload = function(){
 	function getCurrentISODate(){
 		start = moment(new Date());
 		remainder = start.minute() % 20;
+		return new moment(start).subtract(remainder,'minutes').startOf('minute').toISOString();
+	}
+
+	function getCurrentISODateCampaign(){
+		start = moment(new Date());
+		remainder = start.minute() % 2;
 		return new moment(start).subtract(remainder,'minutes').startOf('minute').toISOString();
 	}
 
@@ -147,59 +199,95 @@ window.onload = function(){
 		app.checkSOSData();
 	}
 
+	
 
 
 	function initializeApp(){
+
+		function renderContent(channelData, channelNumber){
+		if(!(Object.keys(channelData).length === 0 && channelData.constructor === Object)){
+			console.log('channel ' + channelNumber + ' updated')
+			if(getResType(channelData.resName) == "image"){
+				$("#" + app.campaignName + " .contentHolder" + channelNumber).empty();
+				$("#" + app.campaignName + " .contentHolder" + channelNumber).append(app.imageElements[channelNumber - 1]);
+				$("#" + app.campaignName + " .contentHolder" + channelNumber + " #img" + channelNumber).attr('src', URL + "/" + app.resourceFolder + "/" + channelData.resName);
+				$("#" + app.campaignName + " .contentHolder" + channelNumber + " #vid" + channelNumber).hide();
+				$("#" + app.campaignName + " .contentHolder" + channelNumber + " #img" + channelNumber).show();
+			}else if(getResType(channelData.resName) == "video"){
+				
+				$("#" + app.campaignName + " .contentHolder" + channelNumber).empty();
+				$("#" + app.campaignName + " .contentHolder" + channelNumber).append(app.videoElements[channelNumber -1]);
+				$("#" + app.campaignName + " .contentHolder"+ channelNumber + " #vid" + channelNumber).append('<source src="' + URL + "/" + app.resourceFolder + "/" + channelData.resName + '" type="video/mp4">');
+				$("#" + app.campaignName + " .contentHolder" + channelNumber + " #img" + channelNumber).hide();
+				$("#" + app.campaignName + " .contentHolder" + channelNumber + " #vid" + channelNumber).show();
+			}
+
+			var duration ;
+			if(channelData.duration){
+				endTimeFOrCurrentSlot = moment(new Date());
+				remainder = channelData.duration - endTimeFOrCurrentSlot.minute() % channelData.duration;
+				nextEndTimeMinute = moment(endTimeFOrCurrentSlot).add(remainder,"minutes").startOf('minute').minute()
+				if(nextEndTimeMinute == 0) nextEndTimeMinute = 60; 
+				currentTimeMinute = moment(moment(new Date()).startOf('minute').toISOString()).minute();
+				duration = nextEndTimeMinute - currentTimeMinute;
+				// app.firstChannelIntervalTime = duration;
+			}
+			else{
+				console.log("Got planned Data for " + "channel" + channelNumber);
+				endTimeFOrCurrentSlot = moment(new Date());
+				remainder = 20 - endTimeFOrCurrentSlot.minute() % 20;
+				nextEndTimeMinute = moment(endTimeFOrCurrentSlot).add(remainder,"minutes").startOf('minute').minute()
+				if(nextEndTimeMinute == 0) nextEndTimeMinute = 60; 
+
+				currentTimeMinute = moment(moment(new Date()).startOf('minute').toISOString()).minute();
+
+				duration = nextEndTimeMinute - currentTimeMinute;
+				// app.firstChannelIntervalTime = duration;
+			}
+		}
+		if(channelNumber == 1){
+			app.firstChannelIntervalTime = duration;
+			console.warn("ch1-> "+app.firstChannelIntervalTime)
+			app.firstChannelInterval = setTimeout(function(){
+				initializeFirstChannel();
+			},app.firstChannelIntervalTime * 60000);
+			$(".loadingDiv").hide()
+		}else if(channelNumber == 2){
+			app.secondChannelIntervalTime = duration;
+			console.warn("ch2-> "+app.secondChannelIntervalTime)
+			app.secondChannelInterval = setTimeout(function(){
+				initializeSecondChannel();
+			},app.secondChannelIntervalTime * 60000);
+		}else if(channelNumber == 3){
+			app.thirdChannelIntervalTime = duration;
+			console.warn("ch3-> "+app.thirdChannelIntervalTime)
+			app.thirdChannelInterval = setTimeout(function(){
+				initializeThirdChannel();
+			},app.thirdChannelIntervalTime * 60000);
+		}
+
+	}
+
 		console.log('Initializing channels.....')
 		$(".loadingText").text('Just there...')
 		function initializeFirstChannel(){
 			getChannelData('ch1_p',getCurrentISODate(),function(firstChannelData){
 				clearTimeout(app.firstChannelInterval);
-				if(!(Object.keys(firstChannelData).length === 0 && firstChannelData.constructor === Object)){
-						console.log('channel 1 updated')
-						if(getResType(firstChannelData.resName) == "image"){
-							$(".contentHolder1").empty();
-							$(".contentHolder1").append(app.imageElements.image1);
-							$(".contentHolder1 #img1").attr('src', URL + "/" + app.resourceFolder + "/" + firstChannelData.resName);
-							$(".contentHolder1 #vid1").hide();
-							$(".contentHolder1 #img1").show();
-						}else if(getResType(firstChannelData.resName) == "video"){
-							console.log($(".contentHolder1"));
-							$(".contentHolder1").empty();
-							$(".contentHolder1").append(app.videoElements.video1);
-							$(".contentHolder1 #vid1").append('<source src="' + URL + "/" + app.resourceFolder + "/" + firstChannelData.resName + '" type="video/mp4">');
-							$(".contentHolder1 #img1").hide();
-							$(".contentHolder1 #vid1").show();
-						}
+				renderContent(firstChannelData,1)
+			});
+		}
 
-					if(firstChannelData.duration){
-						endTimeFOrCurrentSlot = moment(new Date());
-						remainder = firstChannelData.duration - endTimeFOrCurrentSlot.minute() % firstChannelData.duration;
-						nextEndTimeMinute = moment(endTimeFOrCurrentSlot).add(remainder,"minutes").startOf('minute').minute()
-						if(nextEndTimeMinute == 0) nextEndTimeMinute = 60; 
-						currentTimeMinute = moment(moment(new Date()).startOf('minute').toISOString()).minute();
-						duration = nextEndTimeMinute - currentTimeMinute;
-						app.firstChannelIntervalTime = duration;
-					}
-					else{
-						console.log("Got planned Data for " + "channel1");
-						endTimeFOrCurrentSlot = moment(new Date());
-						remainder = 20 - endTimeFOrCurrentSlot.minute() % 20;
-						nextEndTimeMinute = moment(endTimeFOrCurrentSlot).add(remainder,"minutes").startOf('minute').minute()
-						if(nextEndTimeMinute == 0) nextEndTimeMinute = 60; 
+		function initializeSecondChannel(){
+			getChannelData('ch2_p',getCurrentISODate(),function(secondChannelData){
+				clearTimeout(app.secondChannelInterval);
+				renderContent(secondChannelData,2)
+			});
+		}
 
-						currentTimeMinute = moment(moment(new Date()).startOf('minute').toISOString()).minute();
-
-						duration = nextEndTimeMinute - currentTimeMinute;
-						app.firstChannelIntervalTime = duration;
-					}
-				}
-
-				console.warn("ch1-> "+app.firstChannelIntervalTime)
-				app.firstChannelInterval = setTimeout(function(){
-					initializeFirstChannel();
-				},app.firstChannelIntervalTime * 60000);
-				$(".loadingDiv").hide()
+		function initializeThirdChannel(){
+			getChannelData('ch3_p',getCurrentISODate(),function(thirdChannelData){
+				clearTimeout(app.firstChannelInterval);
+				renderContent(thirdChannelData,3)
 			});
 		}
 
@@ -221,14 +309,7 @@ window.onload = function(){
 			});
 		}
 
-		app.authorizeUser = function(){
-		    // firebase.auth().signInWithEmailAndPassword("lgd.beta.slave@gmail.com", "LGDsl@ve").then(function(data){
-		      app.isuserloggedin = true;
-		    // }).catch(function(err){
-		    	// app.ifLoginRequested = false;
-		    	// console.log(err)
-		    // })
-		}
+		
 		
 		// db.collection("ch1_g").doc(app.deviceid).collection('data')
 		firebase.firestore().collection("ch1_g").doc(app.groupName).collection('data')
@@ -247,6 +328,38 @@ window.onload = function(){
             console.log("Initializing Channel 1 general...=>" + querySnapshot.size);
 	    });
 
+	    firebase.firestore().collection("ch2_g").doc(app.groupName).collection('data')
+	      .onSnapshot(function(querySnapshot) {
+	        if(!app.checkIfUserIsLoggedIn() && !app.ifLoginRequested){
+	        	app.ifLoginRequested = true;
+			    app.authorizeUser()
+			  }
+	       	   	secondll = new CircularList();
+    	      	secondllArray = [];
+        	  	querySnapshot.forEach(function(doc) {
+	              	value = doc.data();
+	              	secondllArray.push(value.resName);
+		            secondll.add(value.resName, value.duration);
+		        });
+            console.log("Initializing Channel 2 general...=>" + querySnapshot.size);
+	    });
+	    
+	    firebase.firestore().collection("ch3_g").doc(app.groupName).collection('data')
+	      .onSnapshot(function(querySnapshot) {
+	        if(!app.checkIfUserIsLoggedIn() && !app.ifLoginRequested){
+	        	app.ifLoginRequested = true;
+			    app.authorizeUser()
+			  }
+	       	   	thirdll = new CircularList();
+    	      	thirdllArray = [];
+        	  	querySnapshot.forEach(function(doc) {
+	              	value = doc.data();
+	              	thirdllArray.push(value.resName);
+		            thirdll.add(value.resName, value.duration);
+		        });
+            console.log("Initializing Channel 3 general...=>" + querySnapshot.size);
+	    });  
+
 	    firebase.firestore().collection("ch1_p").doc(app.groupName).collection('data')
 	      .onSnapshot(function(querySnapshot) {
 	      	if(!app.checkIfUserIsLoggedIn() && !app.ifLoginRequested){
@@ -255,6 +368,26 @@ window.onload = function(){
 			  }
       		console.log("Initializing Channel 1 planned...=>" + querySnapshot.size);
           	initializeFirstChannel();
+      	}); 
+
+      	firebase.firestore().collection("ch2_p").doc(app.groupName).collection('data')
+	      .onSnapshot(function(querySnapshot) {
+	      	if(!app.checkIfUserIsLoggedIn() && !app.ifLoginRequested){
+	      		app.ifLoginRequested = true;
+			    app.authorizeUser()
+			  }
+      		console.log("Initializing Channel 2 planned...=>" + querySnapshot.size);
+          	initializeSecondChannel();
+      	}); 
+
+      	firebase.firestore().collection("ch3_p").doc(app.groupName).collection('data')
+	      .onSnapshot(function(querySnapshot) {
+	      	if(!app.checkIfUserIsLoggedIn() && !app.ifLoginRequested){
+	      		app.ifLoginRequested = true;
+			    app.authorizeUser()
+			  }
+      		console.log("Initializing Channel 3 planned...=>" + querySnapshot.size);
+          	initializeThirdChannel();
       	});  
 
 	    firebase.firestore().collection("ticker").doc(app.groupName)
